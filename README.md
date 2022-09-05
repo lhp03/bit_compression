@@ -124,7 +124,7 @@ Delta[3][4]:
 |   (8 bits)   | (4 bits)  |   (n(i) bits)    | ... |     (n(i) bits)      |
 ```
 
-There is a special case; when `n(i)` is zero, it means that the delta values in the given row `i` are all identical. In this case, encoding the delta values can be skipped. In other words, encoding the row `i` such that `n(i) == 0` is simplified as follows.
+There is a special case; when `n(i)` is zero, it means that all filtered values in the given row `i` are identical. In this case, encoding the delta values can be skipped. In other words, encoding the row `i` such that `n(i) == 0` is simplified as follows.
 
 ```
 |  Base value  | # of bits | 
