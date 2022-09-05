@@ -26,7 +26,7 @@ Our simplified image compression scheme consists of two phases. In the first pha
 
 ### Phase 1: Simplified Paeth Filtering
 
-The basic idea behind the Paeth filtering is to record only the difference from the neigboring pixel values because the value of a pixel changes gradually in most cases. Our simplified Paeth filtering algorithm works as follows. 
+The basic idea behind the Paeth filtering is to record only the difference from the neighboring pixel values because the value of a pixel changes gradually in most cases. Our simplified Paeth filtering algorithm works as follows. 
 
 1. First, find the average of the three negiboring pixels in left, upper, and upper-left positions. When the neighboring pixel does not exist, exclude it from the calculation. 
 Let us assume that `S[H][W]` represents an array of the pixel values of the input image where `H` indicates the number of rows and `W` the number of columns. The following shows how to get the average value `Avg[i][i]` for `S[i][j]`.
