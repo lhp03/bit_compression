@@ -74,11 +74,11 @@ Filter[3][4]:
 
 Note that the original pixel value 0 is smaller that the average value 113 in the last pixel at `S[2][3]`. In this case, the difference should be -113 so that we can restore the original value using the sum of the average value and the filtered value such that 113 + (-113) = 0. However, we have added 256 to 0 and used the value 0 + 256 - 113 = 143 as the filtered value to make it positive. Even though this looks strange, we have no problem in restoring the original pixel value by obtaining only the lower 8 bits of the sum: i.e., (113 + 143) % 256 = 0. 
 
-### Phase 2: Encoding filtered values
+### Phase 2: Encoding Filtered Values
 
 Once we get the filtered values, we encode those values as compact as possible. Since the filtered values usually have a smaller range, we can encode them using the smaller number of bits compared to the original pixel values. In order to encode the filtered values, we use the base-delta encoding scheme for each row.
 
-3. Find the minimum and the maximum filetered values for each row. The minimum value will be used as the base value of the row and the deltas from the base value are calculated for each pixel in the given row. The following shows the base values and the deltas for each row in our example.
+3. Find the minimum and the maximum filtered values for each row. The minimum value will be used as the base value of the row and the deltas from the base value are calculated for each pixel in the given row. The following shows the base values and the deltas for each row in our example.
 
 ```
 Filter[3][4]:                         
