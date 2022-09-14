@@ -102,7 +102,6 @@ int encode(const u8* src, int width, int height, u8* result)
 
   //print_const_u8(src, width, height);
   print_u8(result, width, height);
-
   //Test
   return 0;
 }
