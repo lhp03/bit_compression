@@ -173,6 +173,7 @@ typedef struct {
   .ans_len = sizeof(ans##num),		  \
 }
 
+
 const testcase tc[] = {
   TESTCASE(0),
   TESTCASE(1),
