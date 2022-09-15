@@ -21,133 +21,109 @@ typedef unsigned char u8;
 
 #include <stdio.h>
 
-void print_u8(u8* u8, int width, int height);
-void print_const_u8(const u8* u8, int width, int height);
-void print_bit(u8* u8, int width, int height);
-
 /* TODO: Implement this function */
 int encode(const u8* src, int width, int height, u8* result)
 {
-
   if (width == 0 || height == 0) return 0;
 
-  u8* src_ptr = (u8*)src;
-  u8* dst_ptr = (u8*)result;
-  u8* temp_ptr = (u8*)(result+(width * height));
-  int index = 0;
-
   //Phase 1: Simplified Paeth Filtering
-  while(index < (width * height)) {
-    if(index == 0) {
-      *dst_ptr = 0;
-    } else if(index > 0 && index < width) {
-      *dst_ptr += *(src_ptr-1);
-    } else if((index % width) == 0) {
-      *dst_ptr += *(src_ptr-width);
+  for(int i = 0; i < width * height; i++) {
+    if(i == 0) {
+      *(result + i) = 0;
+    } else if(i > 0 && i < width) {
+      *(result + i) += *(src + i - 1);
+    } else if((i % width) == 0) {
+      *(result + i) = *(src + i - width);
     } else {
-      *dst_ptr = (*(src_ptr - 1) + *(src_ptr -(1 + width)) + *(src_ptr - width)) / 3;
+      *(result + i) = (*(src + i - 1) + *(src + i - (1 + width)) + *(src + i - width)) / 3;
     }
-    index++;
-    src_ptr++;
-    dst_ptr++;
   }
 
-  src_ptr = (u8*)src;
-  dst_ptr = (u8*)result;
-  index = 0;
 
-  while(index < (width * height)) {
-    if(*src_ptr >= *dst_ptr) {
-      *dst_ptr = *src_ptr + 256 - *dst_ptr;
+  for(int i = 0; i < width * height; i++) {
+    if(*(src + i) >= *(result + i)) {
+      *(result + i) = *(src + i) + 256 - *(result + i);
     } else {
-      *dst_ptr = *src_ptr - *dst_ptr;
+      *(result + i) = *(src + i) - *(result + i);
     }
-    index++;
-    src_ptr++;
-    dst_ptr++;
   }
 
-  dst_ptr = (u8*)result;
-  temp_ptr = (u8*)(result+(width * height));
+  //make location for base , n;
+  for(int i = width * height - 1; i >= 0; i--) {
+    *(result + i + 2 * (i / width + 1)) = *(result + i);
+    *(result + i) = 0;
+  }
+
 
   //Phase 2: Encoding Filtered Values
-  //From the width * height of the result, it will be used to store base, n, and diff.
-  #define TEMP_WIDTH width + 2
-
   for (int i = 0; i < height; i++) {
-    src_ptr = (u8*)(src + i * width);
-    dst_ptr = (u8*)(result + i * width);
-    u8 min = 0;
-    u8 max = 0;
-
-    //Find max, min
-    for(int j = 0; j < width; j++) {
-      if(j == 0) {
-        min = *(dst_ptr+j);
-        max = *(dst_ptr +j);
+    //find min, max
+    for(int j = 2; j < width + 2; j++) {
+      if (j == 2) {
+        //min
+        *(result + (i * (width+2))) = *(result + (i * (width+2)) + j);
+        //max
+        *(result + (i * (width+2)) + 1) = *(result + (i * (width+2)) + j);
+        //printf("I = %d, J = %d, INDEX: %d, %d\n", i, j , (i * (width+2)) + j ,*(result + (i * j) + j));
+        
+        
         continue;
+      }
+
+      //min
+      if(*(result + (i * (width+2))) >= *(result + (i * (width+2)) + j))  {
+        *(result +(i * (width+2))) = *(result + (i * (width+2)) + j);
+      }
+      //max
+      if(*(result + (i * (width+2)) + 1) <= *(result + (i * (width+2)) + j)) {
+        *(result + (i * (width+2)) + 1) = *(result + (i * (width+2)) + j);
       } 
-      if(*(dst_ptr+j) <= min) min = *(dst_ptr+j);
-      if(*(dst_ptr+j) >= max) max = *(dst_ptr+j);
     }
-
-    //make Delta
-    for(int j = 0; j < width; j++) {
-      *(dst_ptr+j) = *(dst_ptr+j) - min;
-    }
-
-    max = max - min;
-    
-    //find n
-    u8 n;
-    if(max == 0) n = 0;
-    else if(max == 1) n = 1;
-    else if(max < 4) n = 2;
-    else if(max < 8) n = 3;
-    else if(max < 16) n = 4;
-    else if(max < 32) n = 5;
-    else if(max < 64) n = 6;
-    else if(max < 128) n = 7;
-    else n = 8;
-    
-    for(int j = 0; j < (TEMP_WIDTH); j++) {
-      u8 temp;
-      if(j == 0) temp = min;
-      else if(j == 1) temp = n;
-      else temp = *(dst_ptr + (j - 2));
-
-      *(temp_ptr + j)= temp;
-    }
-    dst_ptr += width;
-    temp_ptr += TEMP_WIDTH;
   }
 
-  //BIT COMPRESSION
-  dst_ptr = (u8*)result;
-  temp_ptr = (u8*)(result+(width * height));
+  //make dela
+  for(int i = 0; i < (width + 2) * height; i++) {
+    if(i % (width +2) == 0) continue;
+    else {
+      *(result + i) = *(result + i) - *(result + (i - (i % (width + 2))));
+    }
+    if( i % (width + 2) == 1) {
 
+      if(*(result + i) == 0) *(result + i) = 0;
+      else if(*(result + i) == 1) *(result + i) = 1;
+      else if(*(result + i) < 4) *(result + i) = 2;
+      else if(*(result + i) < 8) *(result + i) = 3;
+      else if(*(result + i) < 16) *(result + i) = 4;
+      else if(*(result + i) < 32) *(result + i) = 5;
+      else if(*(result + i) < 64) *(result + i) = 6;
+      else if(*(result + i) < 128) *(result + i) = 7;
+      else *(result + i) = 8;
+      
+    }
+  }
+
+  //Bit Compression
+  int length = (width + 2) * height * 8;
   int _n = 0;
-  int length = (TEMP_WIDTH) * height * 8;
-  for(int i = (TEMP_WIDTH) * height - 1; i >= 0; i--) {
+  for(int i = (width + 2) * height - 1; i >= 0; i--) {
     int shift;
 
-    if(i % (TEMP_WIDTH) == (TEMP_WIDTH - 1)) _n =  *(temp_ptr + ((i / (TEMP_WIDTH)) * (TEMP_WIDTH) + 1));
+    if(i % (width + 2) == (width + 2 - 1)) _n =  *(result + ((i / (width + 2)) * (width + 2) + 1));
 
-    if(i % (TEMP_WIDTH) == 0) shift = 0;
-    else if(i % (TEMP_WIDTH) == 1) shift = 4;
+    if(i % (width + 2) == 0) shift = 0;
+    else if(i % (width + 2) == 1) shift = 4;
     else shift = 8 - _n;
 
     if(shift == 0) continue;
 
-    *(temp_ptr + i) = *(temp_ptr + i) << shift;
+    *(result + i) = *(result + i) << shift;
 
-    for(int j = i + 1; j < (TEMP_WIDTH) * height; j++) {
-      u8 temp = *(temp_ptr + j);
+    for(int j = i + 1; j < (width + 2) * height; j++) {
+      u8 temp = *(result + j);
       temp = temp >> (8 - shift);
-      *(temp_ptr + j - 1) = *(temp_ptr + j - 1) | temp;
-      *(temp_ptr + j) = *(temp_ptr + j) << shift;
+      *(result + j - 1) = *(result + j - 1) | temp;
+      *(result + j) = *(result + j) << shift;
     }
-
     length -= shift;
   }
 
@@ -157,44 +133,5 @@ int encode(const u8* src, int width, int height, u8* result)
     length = length / 8 + 1;
   }
 
-  dst_ptr = result;
-  temp_ptr = (result + width * height);
-  for(int i = 0; i < length; i++) {
-    *(dst_ptr + i) = *(temp_ptr + i);
-  }
-
   return length;
-}
-
-
-void print_bit(u8* u8, int width, int height) {
-
-  printf("BIT:\n");
-  for(int j = 0; j < (TEMP_WIDTH) * height; j++) {
-    if(j > 0 && j % (TEMP_WIDTH) * height == 0) printf("\n");
-    printf("%.3d ", *(u8 + (width * height) + j));
-  }
-  printf("\n");
-}
-
-void print_u8(u8* u8, int width, int height) {
-  printf("DESTINATION:\n");
-  for(int i = 0; i < width * height; i++) {
-    if(i > 0 && i % width == 0) {
-      printf("\n");
-    }
-    printf("%.3d ", u8[i]);
-  }
-  printf("\n");
-}
-
-void print_const_u8(const u8* u8, int width, int height) {
-  printf("SRC:\n");
-    for(int i = 0; i < width * height; i++) {
-    if(i > 0 && i % width == 0) {
-      printf("\n");
-    }
-    printf("%.3d ", u8[i]);
-  }
-  printf("\n");
 }

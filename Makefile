@@ -21,13 +21,13 @@
 TARGET = pa1
 SRCS = main.c pa1.c
 CC = gcc
-CFLAGS = -g -O2 -Wall 
+CFLAGS = -fstack-protector-all -g -O2 -Wall
 OBJS = $(SRCS:.c=.o)
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) -o $@ $^ 
+	$(CC) -fstack-protector-all -o $@ $^ 
 
 clean:
 	$(RM) $(TARGET) $(OBJS)
