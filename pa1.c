@@ -19,119 +19,100 @@
 
 typedef unsigned char u8;
 
-#include <stdio.h>
+u8 get_avg(const u8* src, int width, int height, int w, int h) {
+  if (w == 0 && h == 0) {
+    return 0;
+  } else if(h != 0 && w == 0) {
+    return *(src + (width * (h - 1)) + w);
+  } else if(h == 0 && w != 0) {
+    return *(src + (width * h + w - 1));
+  } else {
+    return (*(src + (width * (h - 1)) + w) + *(src + (width * h) + w - 1) + *(src + (width * (h - 1)) + w - 1)) / 3;
+  }
+}
+
+u8 get_filter(const u8* src, int width, int height, int w, int h) {
+  u8 avg = get_avg(src, width, height, w, h);
+  if(*(src + (width * h) + w) >= avg) return *(src + (width * h) + w) - avg;
+  else return *(src + (width * h) + w) + 256 - avg;
+}
+
+u8 get_min(const u8* src, int width, int height, int h) {
+  u8 min = get_filter(src, width, height, 0, h);
+
+  for(int i = 1; i < width; i++) {
+    if(min > get_filter(src, width, height, i, h)) min = get_filter(src, width, height, i, h);
+  }
+
+  return min;
+}
+
+u8 get_max(const u8* src, int width, int height, int h) {
+  u8 max = get_filter(src, width, height, 0, h);
+
+  for(int i = 1; i < width; i++) {
+    if(max < get_filter(src, width, height, i, h)) max = get_filter(src, width, height, i, h);
+  }
+
+  return max;
+}
+
+u8 get_n(const u8* src, int width, int height, int h) {
+  u8 max = get_max(src, width, height, h) - get_min(src, width, height, h);
+  if(max == 0) return 0;
+  else if(max == 1) return 1;
+  else if(max < 4) return 2;
+  else if(max < 8) return 3;
+  else if(max < 16) return 4;
+  else if(max < 32) return 5;
+  else if(max < 64) return 6;
+  else if(max < 128) return 7;
+  else return 8;
+}
+
+
+u8 get_delta(const u8* src, int width, int height, int w, int h) {
+  u8 base = get_min(src, width, height, h);
+
+  return get_filter(src, width, height, w, h) - base;
+}
+
+void insert_bit(u8* result, u8 value, int len_value, int* bit_index) {
+  if(len_value == 0) return;
+
+  value = value << (8 - len_value);
+  if (*bit_index % 8 == 0) {
+    *(result + *bit_index / 8) = value;
+  } else {
+    u8 temp = (value >> (*bit_index % 8));
+    value = value << (8 - *bit_index % 8);
+    *(result + *bit_index / 8) = *(result + *bit_index / 8) | temp;
+    *(result + *bit_index / 8 + 1) = value;
+  }
+  *bit_index += len_value;
+}
 
 /* TODO: Implement this function */
 int encode(const u8* src, int width, int height, u8* result)
 {
   if (width == 0 || height == 0) return 0;
 
-  //Phase 1: Simplified Paeth Filtering
-  for(int i = 0; i < width * height; i++) {
-    if(i == 0) {
-      *(result + i) = 0;
-    } else if(i > 0 && i < width) {
-      *(result + i) += *(src + i - 1);
-    } else if((i % width) == 0) {
-      *(result + i) = *(src + i - width);
-    } else {
-      *(result + i) = (*(src + i - 1) + *(src + i - (1 + width)) + *(src + i - width)) / 3;
+  int bit_index = 0;
+  for(int i = 0; i < height; i++) {
+    u8 base = get_min(src, width, height, i);
+    u8 n = get_n(src, width, height, i);
+
+    insert_bit(result, base, 8, &bit_index);
+    insert_bit(result, n, 4, &bit_index);
+
+    for(int j = 0; j < width; j++) {
+      insert_bit(result, get_delta(src, width, height, j, i), (int)n, &bit_index);
     }
   }
 
+  int length = bit_index / 8;
 
-  for(int i = 0; i < width * height; i++) {
-    if(*(src + i) >= *(result + i)) {
-      *(result + i) = *(src + i) + 256 - *(result + i);
-    } else {
-      *(result + i) = *(src + i) - *(result + i);
-    }
-  }
-
-  //make location for base , n;
-  for(int i = width * height - 1; i >= 0; i--) {
-    *(result + i + 2 * (i / width + 1)) = *(result + i);
-    *(result + i) = 0;
-  }
-
-
-  //Phase 2: Encoding Filtered Values
-  for (int i = 0; i < height; i++) {
-    //find min, max
-    for(int j = 2; j < width + 2; j++) {
-      if (j == 2) {
-        //min
-        *(result + (i * (width+2))) = *(result + (i * (width+2)) + j);
-        //max
-        *(result + (i * (width+2)) + 1) = *(result + (i * (width+2)) + j);
-        //printf("I = %d, J = %d, INDEX: %d, %d\n", i, j , (i * (width+2)) + j ,*(result + (i * j) + j));
-        
-        
-        continue;
-      }
-
-      //min
-      if(*(result + (i * (width+2))) >= *(result + (i * (width+2)) + j))  {
-        *(result +(i * (width+2))) = *(result + (i * (width+2)) + j);
-      }
-      //max
-      if(*(result + (i * (width+2)) + 1) <= *(result + (i * (width+2)) + j)) {
-        *(result + (i * (width+2)) + 1) = *(result + (i * (width+2)) + j);
-      } 
-    }
-  }
-
-  //make dela
-  for(int i = 0; i < (width + 2) * height; i++) {
-    if(i % (width +2) == 0) continue;
-    else {
-      *(result + i) = *(result + i) - *(result + (i - (i % (width + 2))));
-    }
-    if( i % (width + 2) == 1) {
-
-      if(*(result + i) == 0) *(result + i) = 0;
-      else if(*(result + i) == 1) *(result + i) = 1;
-      else if(*(result + i) < 4) *(result + i) = 2;
-      else if(*(result + i) < 8) *(result + i) = 3;
-      else if(*(result + i) < 16) *(result + i) = 4;
-      else if(*(result + i) < 32) *(result + i) = 5;
-      else if(*(result + i) < 64) *(result + i) = 6;
-      else if(*(result + i) < 128) *(result + i) = 7;
-      else *(result + i) = 8;
-      
-    }
-  }
-
-  //Bit Compression
-  int length = (width + 2) * height * 8;
-  int _n = 0;
-  for(int i = (width + 2) * height - 1; i >= 0; i--) {
-    int shift;
-
-    if(i % (width + 2) == (width + 2 - 1)) _n =  *(result + ((i / (width + 2)) * (width + 2) + 1));
-
-    if(i % (width + 2) == 0) shift = 0;
-    else if(i % (width + 2) == 1) shift = 4;
-    else shift = 8 - _n;
-
-    if(shift == 0) continue;
-
-    *(result + i) = *(result + i) << shift;
-
-    for(int j = i + 1; j < (width + 2) * height; j++) {
-      u8 temp = *(result + j);
-      temp = temp >> (8 - shift);
-      *(result + j - 1) = *(result + j - 1) | temp;
-      *(result + j) = *(result + j) << shift;
-    }
-    length -= shift;
-  }
-
-  if(length % 8 == 0) {
-    length = length / 8;
-  } else {
-    length = length / 8 + 1;
-  }
+  if(bit_index % 8 != 0) length++;
 
   return length;
 }
