@@ -20,7 +20,7 @@
 #include <stdio.h>
 
 #define LEN_GUARD 8
-#define LEN_DST 1000
+#define LEN_DST 45
 #define GUARD_WORD 0xDEADBEEFDEADBEEF
 typedef unsigned char u8;
 
